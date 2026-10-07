@@ -1,0 +1,8 @@
+bin/
+queries.json
+before.json
+after.json
+comparison.json
+report.json
+cutover-state.json
+.DS_Store

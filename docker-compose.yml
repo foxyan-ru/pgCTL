@@ -1,0 +1,65 @@
+version: "3.9"
+
+# Local demo stack for pgctl: a "source" Postgres (pg-old) and an upgrade
+# "candidate" Postgres (pg-new), both with pg_stat_statements enabled so
+# `pgctl upgrade capture` has real traffic to read. A read replica of pg-old
+# is included so `pgctl scale` has something to demonstrate.
+#
+# Nothing here is started automatically — `pgctl create` / `pgctl scale` /
+# `pgctl decommission` drive this file via `docker compose`.
+services:
+  pg-old:
+    image: postgres:15
+    container_name: pgctl-pg-old
+    environment:
+      POSTGRES_USER: pgctl
+      POSTGRES_PASSWORD: pgctl
+      POSTGRES_DB: appdb
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.track=all"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-old-data:/var/lib/postgresql/data
+      - ./scripts/init-pg-stat-statements.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  pg-new:
+    image: postgres:16
+    container_name: pgctl-pg-new
+    environment:
+      POSTGRES_USER: pgctl
+      POSTGRES_PASSWORD: pgctl
+      POSTGRES_DB: appdb
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.track=all"
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg-new-data:/var/lib/postgresql/data
+      - ./scripts/init-pg-stat-statements.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  pg-replica:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: pgctl
+      POSTGRES_PASSWORD: pgctl
+      POSTGRES_DB: appdb
+    depends_on:
+      - pg-old
+    # A standalone container standing in for a read replica in the demo;
+    # wiring real streaming replication is a stretch goal noted in
+    # docs/architecture.md, not required for `pgctl scale` to be demoable.
+    ports:
+      - "5434-5440:5432"
+
+volumes:
+  pg-old-data:
+  pg-new-data:

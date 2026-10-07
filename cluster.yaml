@@ -1,0 +1,9 @@
+name: demo
+image: postgres:15
+port: 5432
+replicas: 1
+storage: 5GiB
+upgrade:
+  targetImage: postgres:16
+  targetPort: 5433
+  failThreshold: 0.20
